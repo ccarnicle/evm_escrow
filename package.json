@@ -1,0 +1,22 @@
+{
+  "name": "escrow-monorepo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "next": "npm run dev -w packages/next-app",
+    "hardhat:compile": "npm run compile -w packages/hardhat",
+    "hardhat:test": "npm run test -w packages/hardhat",
+    "hardhat:node": "npm run node -w packages/hardhat",
+    "hardhat:deploy:localhost": "npm run deploy:localhost -w packages/hardhat"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "private": true,
+  "workspaces": [
+    "packages/hardhat",
+    "packages/next-app"
+  ]
+}
