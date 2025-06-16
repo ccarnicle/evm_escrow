@@ -51,6 +51,8 @@ contract EscrowFactory {
         address indexed depositor,
         uint256 amount
     );
+  
+    event EscrowFinalized(uint256 indexed escrowId);
 
     // --- Functions ---
 
@@ -145,6 +147,57 @@ contract EscrowFactory {
         // --- Action ---
         // Use the internal deposit function to handle the transfer and state updates
         _deposit(_escrowId, msg.sender, _amount);
+    }
+
+        /**
+     * @dev Allows the organizer to distribute the funds after the contest ends.
+     * This can only be called once.
+     * @param _escrowId The ID of the escrow to finalize.
+     * @param _recipients An array of addresses to receive funds.
+     * @param _amounts An array of amounts to be sent to each recipient.
+     */
+    function distributeWinnings(
+        uint256 _escrowId,
+        address[] calldata _recipients,
+        uint256[] calldata _amounts
+    ) public {
+        require(_escrowId < escrows.length, "Invalid escrow ID");
+        Escrow storage escrow = escrows[_escrowId];
+
+        // --- CHECKS ---
+        // 1. Authorization: Only the organizer can call this.
+        require(msg.sender == escrow.organizer, "Only the organizer can distribute winnings");
+
+        // 2. Timing: The contest must have ended.
+        require(block.timestamp >= escrow.endTime, "Contest has not ended yet");
+
+        // 3. Finalization: Ensure this function can only be called once.
+        require(!escrow.finalized, "Winnings have already been distributed");
+
+        // 4. Input Validity: The arrays must have the same number of entries.
+        require(_recipients.length == _amounts.length, "Recipients and amounts arrays must have the same length");
+
+        // 5. Sum Check: The total payout amount must exactly equal the total amount in escrow.
+        uint256 totalPayout;
+        for (uint i = 0; i < _amounts.length; i++) {
+            totalPayout += _amounts[i];
+        }
+        require(totalPayout == escrow.totalAmount, "Total payout must equal total amount in escrow");
+
+        // --- EFFECTS & INTERACTIONS ---
+        // Mark as finalized *before* the transfers to prevent re-entrancy attacks.
+        escrow.finalized = true;
+
+        IERC20 token = IERC20(escrow.tokenContract);
+        for (uint i = 0; i < _recipients.length; i++) {
+            // 6. Recipient Check: The recipient MUST have been a depositor.
+            require(escrow.depositors[_recipients[i]] > 0, "A recipient was not a depositor");
+            
+            // Transfer the tokens.
+            token.transfer(_recipients[i], _amounts[i]);
+        }
+
+        emit EscrowFinalized(_escrowId);
     }
 
     /**

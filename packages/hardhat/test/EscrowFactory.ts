@@ -181,4 +181,119 @@ describe("EscrowFactory", function () {
     });
 
   });
+
+  // Test suite for the distributeWinnings function
+  describe("distributeWinnings", function () {
+    it("Should allow the organizer to distribute winnings correctly", async function () {
+      // 1. SETUP: Create an escrow and have two participants join.
+      const { escrowFactory, mockToken, owner, otherAccount } = await loadFixture(deployEscrowFactoryFixture);
+      const dues = ethers.parseUnits("100", 18);
+      const tokenAddress = await mockToken.getAddress();
+      const latestTime = await time.latest();
+      const endTime = latestTime + 3600;
+
+      // Escrow created by `owner`
+      await escrowFactory.createEscrow(tokenAddress, dues, 0, endTime, false);
+
+      // `owner` joins
+      await mockToken.connect(owner).approve(escrowFactory.target, dues);
+      await escrowFactory.connect(owner).joinEscrow(0, dues);
+
+      // `otherAccount` joins
+      await mockToken.connect(owner).transfer(otherAccount.address, dues);
+      await mockToken.connect(otherAccount).approve(escrowFactory.target, dues);
+      await escrowFactory.connect(otherAccount).joinEscrow(0, dues);
+
+      // The total prize pool is now 200 MTK.
+      let details = await escrowFactory.getEscrowDetails(0);
+      expect(details.totalAmount).to.equal(ethers.parseUnits("200", 18));
+      
+      // Fast-forward time to after the endTime
+      await time.increaseTo(endTime + 1);
+
+      // 2. ACTION: The organizer distributes the winnings.
+      // Let's say `otherAccount` is the winner and gets the whole pool.
+      const recipients = [otherAccount.address];
+      const amounts = [ethers.parseUnits("200", 18)];
+
+      const initialWinnerBalance = await mockToken.balanceOf(otherAccount.address);
+      
+      await escrowFactory.connect(owner).distributeWinnings(0, recipients, amounts);
+
+      // 3. ASSERTIONS
+      // Winner's balance should have increased by the prize amount.
+      const finalWinnerBalance = await mockToken.balanceOf(otherAccount.address);
+      expect(finalWinnerBalance).to.equal(initialWinnerBalance + amounts[0]);
+
+      // The contract's token balance should be zero.
+      expect(await mockToken.balanceOf(escrowFactory.target)).to.equal(0);
+
+      // The escrow should be marked as finalized.
+      details = await escrowFactory.getEscrowDetails(0);
+      expect(details.finalized).to.be.true;
+    });
+
+    it("Should revert if a non-organizer tries to distribute winnings", async function () {
+      // SETUP: Create a pool and have someone join
+      const { escrowFactory, mockToken, owner, otherAccount } = await loadFixture(deployEscrowFactoryFixture);
+      await escrowFactory.createEscrow(await mockToken.getAddress(), 100, 0, (await time.latest()) + 3600, false);
+      await mockToken.approve(escrowFactory.target, 100);
+      await escrowFactory.joinEscrow(0, 100);
+      await time.increaseTo((await time.latest()) + 3601);
+
+      // ACTION & ASSERTION: Expect a revert when `otherAccount` tries to pay out
+      await expect(
+        escrowFactory.connect(otherAccount).distributeWinnings(0, [owner.address], [100])
+      ).to.be.revertedWith("Only the organizer can distribute winnings");
+    });
+
+    it("Should revert if the distribution is attempted before the end time", async function () {
+      // SETUP: Create a pool ending in 1 hour
+      const { escrowFactory, mockToken } = await loadFixture(deployEscrowFactoryFixture);
+      const endTime = (await time.latest()) + 3600;
+      await escrowFactory.createEscrow(await mockToken.getAddress(), 100, 0, endTime, false);
+      
+      // ACTION & ASSERTION: Trying to pay out now (before endTime) should fail
+      await expect(
+        escrowFactory.distributeWinnings(0, [], [])
+      ).to.be.revertedWith("Contest has not ended yet");
+    });
+
+    it("Should revert if the total payout amount does not match the amount in escrow", async function () {
+      // SETUP
+      const { escrowFactory, mockToken, owner, otherAccount } = await loadFixture(deployEscrowFactoryFixture);
+      const dues = ethers.parseUnits("100", 18);
+      const endTime = (await time.latest()) + 3600;
+    
+      //approve call for the owner
+      await mockToken.connect(owner).approve(escrowFactory.target, dues);
+    
+      await escrowFactory.connect(owner).createEscrow(await mockToken.getAddress(), dues, 0, endTime, true);
+      await time.increaseTo(endTime + 1);
+    
+      // ACTION & ASSERTION
+      const tooMuch = ethers.parseUnits("150", 18);
+      await expect(
+        escrowFactory.distributeWinnings(0, [otherAccount.address], [tooMuch])
+      ).to.be.revertedWith("Total payout must equal total amount in escrow");
+    });
+
+    it("Should revert if trying to pay out to an address that was not a depositor", async function () {
+      // SETUP
+      const { escrowFactory, mockToken, owner, otherAccount } = await loadFixture(deployEscrowFactoryFixture);
+      const dues = ethers.parseUnits("100", 18);
+      const endTime = (await time.latest()) + 3600;
+      
+      //approve call for the owner
+      await mockToken.connect(owner).approve(escrowFactory.target, dues);
+      
+      await escrowFactory.connect(owner).createEscrow(await mockToken.getAddress(), dues, 0, endTime, true);
+      await time.increaseTo(endTime + 1);
+  
+      // ACTION & ASSERTION
+      await expect(
+          escrowFactory.connect(owner).distributeWinnings(0, [otherAccount.address], [dues])
+      ).to.be.revertedWith("A recipient was not a depositor");
+    });
+  });
 });

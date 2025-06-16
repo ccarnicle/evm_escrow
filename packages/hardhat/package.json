@@ -10,7 +10,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "node": "hardhat node",
-    "deploy:localhost": "hardhat run scripts/deployGreeter.ts --network localhost"
+    "deploy:localhost": "hardhat ignition deploy ignition/modules/DeployEscrow.ts --network localhost"
   },
   "keywords": [],
   "author": "",
