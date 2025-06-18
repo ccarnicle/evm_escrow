@@ -1,77 +1,107 @@
-// packages/next-app/app/page.tsx
-'use client'; // This is a Client Component
+'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-import GreeterAbi from '@escrow-monorepo/hardhat/artifacts/contracts/Greeter.sol/Greeter.json';
+import PoolCard from "@/components/PoolCard";
+import { useWeb3 } from '@/lib/contexts/Web3Context';
+import { ESCROW_FACTORY_ADDRESS, ESCROW_FACTORY_ABI } from '@/lib/contracts';
 
-// PASTE THE DEPLOYED CONTRACT ADDRESS HERE
-const GREETER_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+// The shape of our pool data, mirroring the PoolCard component's needs
+interface Pool {
+  id: number;
+  name: string; // We'll use the ID as a placeholder for now
+  organizer: string;
+  tokenSymbol: string; // We'll use the contract address as a placeholder
+  dues: string;
+  totalPot: string;
+  endsIn: string; // We'll calculate this
+}
 
 export default function Home() {
-  const [greeting, setGreeting] = useState('');
-  const [newGreeting, setNewGreeting] = useState('');
+  const { contract } = useWeb3();
+  const [pools, setPools] = useState<Pool[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  async function getProviderAndSigner() {
-    // We are using the browser's provider injected by MetaMask or other wallets
-    // For local testing, your wallet must be connected to the "Localhost 8545" network
-    if (typeof window.ethereum === 'undefined') {
-      alert('Please install MetaMask!');
-      return;
-    }
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    return { provider, signer };
-  }
+  useEffect(() => {
+    const fetchPools = async () => {
+      // We don't need to connect wallet to view pools, so we can create a read-only provider
+      // if the contract instance (with a signer) isn't ready yet.
+      let readOnlyContract = contract;
+      if (!readOnlyContract) {
+        try {
+            const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545/');
+            readOnlyContract = new ethers.Contract(ESCROW_FACTORY_ADDRESS, ESCROW_FACTORY_ABI, provider);
+        } catch (e) {
+            console.error("Could not create a read-only provider.", e);
+            setIsLoading(false);
+            return;
+        }
+      }
+      
+      setIsLoading(true);
+      try {
+        const createdFilter = readOnlyContract.filters.EscrowCreated();
+        const events = await readOnlyContract.queryFilter(createdFilter);
+        
+        const poolPromises = events.map(async (event) => {
+          // This is the type guard. We check if 'args' exists on the event object.
+          if (!('args' in event)) {
+            console.warn("Found a log that could not be parsed:", event);
+            return null;
+          }
 
-  async function fetchGreeting() {
-    const { provider } = (await getProviderAndSigner()) || {};
-    if (!provider) return;
-    
-    const contract = new ethers.Contract(GREETER_ADDRESS, GreeterAbi.abi, provider);
-    try {
-      const data = await contract.greet();
-      setGreeting(data);
-      console.log('Greeting from contract:', data);
-    } catch (err) {
-      console.error('Error fetching greeting:', err);
-    }
-  }
+          // From here on, TypeScript knows that event is an EventLog with an 'args' property.
+          const escrowId = event.args.escrowId;
+          
+          const details = await readOnlyContract!.getEscrowDetails(escrowId);
+          
+          const endsInMs = Number(details.endTime) * 1000 - Date.now();
+          // Handle pools that have already ended
+          const endsInDays = endsInMs > 0 ? Math.ceil(endsInMs / (1000 * 60 * 60 * 24)) : 0;
 
-  async function handleSetGreeting() {
-    if (!newGreeting) return;
-    const { signer } = (await getProviderAndSigner()) || {};
-    if (!signer) return;
+          return {
+            id: Number(escrowId),
+            name: `Pool #${escrowId}`,
+            organizer: details.organizer,
+            tokenSymbol: 'Tokens', // Generic placeholder
+            dues: ethers.formatUnits(details.dues, 18), // Use formatUnits for flexibility
+            totalPot: ethers.formatUnits(details.totalAmount, 18), // Assuming 18 decimals for now
+            endsIn: endsInDays > 0 ? `${endsInDays} day(s)` : 'Ended',
+          };
+        });
 
-    const contract = new ethers.Contract(GREETER_ADDRESS, GreeterAbi.abi, signer);
-    try {
-      const transaction = await contract.setGreeting(newGreeting);
-      await transaction.wait(); // Wait for the transaction to be mined
-      setNewGreeting('');
-      await fetchGreeting(); // Fetch the new greeting to update the UI
-    } catch (err) {
-      console.error('Error setting greeting:', err);
-    }
-  }
+        const resolvedPools = (await Promise.all(poolPromises)).filter(p => p !== null) as Pool[];
+        setPools(resolvedPools.reverse());
+      } catch (error) {
+        console.error("Failed to fetch pools:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPools();
+  }, [contract]); // This dependency array is correct.
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gray-900 text-white">
-      <div className="space-y-6 w-full max-w-md">
-        <h1 className="text-4xl font-bold text-center">Greeter dApp</h1>
-        <div className="p-4 border border-gray-600 rounded-lg">
-          <h2 className="text-2xl">Current Greeting: <span className="font-mono text-yellow-400">{greeting}</span></h2>
-          <button onClick={fetchGreeting} className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Fetch Greeting</button>
-        </div>
-        <div className="p-4 border border-gray-600 rounded-lg space-y-2">
-          <input 
-            onChange={(e) => setNewGreeting(e.target.value)} 
-            value={newGreeting} 
-            placeholder="Set a new greeting"
-            className="w-full p-2 rounded bg-gray-800 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button onClick={handleSetGreeting} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Set Greeting</button>
-        </div>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-4xl font-bold">Active Prize Pools</h1>
+        <p className="text-foreground/80 mt-2">
+          Join an existing pool or create your own.
+        </p>
       </div>
-    </main>
+
+      {isLoading ? (
+        <p>Loading pools...</p>
+      ) : pools.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {pools.map((pool) => (
+            <PoolCard key={pool.id} pool={pool} />
+          ))}
+        </div>
+      ) : (
+        <p>No active pools found. Why not create one?</p>
+      )}
+    </div>
   );
 }

@@ -5,7 +5,6 @@ This package contains all Solidity smart contracts, tests, and deployment script
 ## 🛠️ Tech Stack
 - **Solidity:** v0.8.28
 - **Hardhat:** Development and testing framework
-- **Hardhat Ignition:** Declarative deployment system
 - **Ethers.js:** Blockchain interaction library
 - **OpenZeppelin Contracts:** For standard and secure base contracts like `IERC20` and `ERC20`.
 - **Chai:** Assertion library for tests.
@@ -35,14 +34,15 @@ This package contains all Solidity smart contracts, tests, and deployment script
 - **Coverage:** 11 passing tests providing comprehensive coverage for all functions and security conditions in `EscrowFactory.sol`.
 
 ## 🚀 Deployment
-- **System:** Hardhat Ignition
-- **Module:** `ignition/modules/DeployEscrow.ts`
+- **System:** Classic Hardhat Script
+- **Script:** `scripts/deploy.ts`
 - **Status:** ✅ COMPLETE
+- **Details:** The script deploys both the `MockToken` and `EscrowFactory` contracts to the specified network and logs their addresses to the console.
 
 ## ⚙️ Workflow Commands
 Run these commands from this directory (`packages/hardhat`).
 
-- `npm run compile`: Compiles all contracts and generates TypeChain typings.
+- `npm run compile`: Compiles all contracts.
 - `npm run test`: Runs the full Hardhat test suite.
 - `npm run node`: Starts the local Hardhat node on `chainId: 1337`.
-- `npm run deploy:localhost`: Deploys the `EscrowFactory` contract to the local Hardhat node using the `DeployEscrow.ts` module.
+- `npm run deploy:localhost`: Deploys the `EscrowFactory` and `MockToken` contracts to the local Hardhat node using the `scripts/deploy.ts` script.
