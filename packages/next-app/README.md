@@ -6,27 +6,52 @@ This package contains the Next.js frontend for the Escrow Prize Pool project.
 - **Next.js 14+:** React framework (using App Router)
 - **Tailwind CSS v3:** For styling
 - **ethers.js v6:** For smart contract interaction
+- **TypeScript:** For type safety
 - **React Context:** For global state management (wallet connection)
 
-## 🧩 Core Features
-- **Landing Page (`/`):** Displays a list of all active prize pools by reading live data from the `EscrowFactory` smart contract.
-- **Create Pool Page (`/create`):** A page with a form that allows users to create new prize pools.
-- **Wallet Connection:** A `Web3Context` provides global state for the user's wallet. The header includes a "Connect Wallet" button that uses this context to connect via MetaMask and display the user's address.
-- **Core Components:** `Header`, `Footer`, `PoolCard`, `CreatePoolForm`.
-- **Theming:** A configurable, modern dark theme is implemented via `tailwind.config.ts` and CSS variables.
+## ✅ v0.1 Features
 
-## ⚙️ Workflow Commands
-Run these commands from this directory (`packages/next-app`).
+The frontend is feature-complete for the v0.1 MVP, providing a full end-to-end user experience for interacting with the escrow prize pool smart contracts.
 
-- `npm run dev`: Starts the Next.js development server on `http://localhost:3000`.
+- **Homepage (`/`):** Displays a grid of all created prize pools by fetching live event data from the `EscrowFactory` contract.
+- **Create Pool Page (`/create`):** A dedicated form for creating new prize pools. It implements the two-step `approve` and `createEscrow` transaction flow for depositing dues upon creation.
+- **Dynamic Pool Detail Page (`/pool/[id]`):** A dynamic page that serves as the main hub for a single pool. It:
+    - Fetches and displays detailed on-chain data for the specific pool.
+    - Conditionally renders different forms based on the pool's state and the user's role (organizer vs. participant).
+- **Join Pool Form:** A component on the detail page that allows any user to join an open pool. It handles the `approve` and `joinEscrow` flow for both fixed-dues and open-contribution pools.
+- **Distribute Winnings Form:** A secure component that is **only visible to the pool's organizer** after the pool's end time has passed. It allows the organizer to specify winner addresses and amounts, validating the data before sending the `distributeWinnings` transaction.
+- **Global Web3 Context:** A React Context (`Web3Context`) provides a shared global state for the connected wallet, provider, and contract instances, making them easily accessible to any component.
 
-## ✅ Current Status
-- **Live Data:** The application successfully fetches and displays the list of all created prize pools by connecting to a local Hardhat node and querying `EscrowCreated` events from the deployed `EscrowFactory` contract.
-- **Wallet Integration:** The wallet connection flow is fully functional. Users can connect their MetaMask wallet, and the application state updates to reflect the connected account.
-- **"Create Pool" Feature Complete:** The UI and transaction logic for creating a new pool are fully implemented. This includes the critical two-step `approve` and `createEscrow` flow, providing a robust example of a core dApp user interaction.
+## 📈 Project Status & Roadmap
 
-## 🚀 Next Steps
-1.  **Build Pool Detail Page (`/pool/[id]`):** Create the dynamic page to display detailed information for a single pool using the `getEscrowDetails` contract function.
-2.  **Implement "Join Pool" Feature:** On the detail page, build the UI and transaction logic (`approve` & `joinEscrow`) for users to deposit funds and join a pool.
-3.  **Implement "Distribute Winnings" Feature:** Build the UI for the pool organizer to close the pool after its end time and distribute the total funds to the winners by calling the `distributeWinnings` function.
-4.  **Display Participant Data:** Enhance the detail page by showing a list of depositors to make the application more interactive.
+For the overall project status, high-level goals, and the roadmap for v0.2 and beyond, please see the main **[`PROJECT_PLAN.md`](../../PROJECT_PLAN.md)** file in the root of the monorepo.
+
+## ⚙️ Getting Started
+
+1.  **Navigate to this directory:**
+    ```bash
+    cd packages/next-app
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+3.  **Configure Contract Addresses:**
+    Before running the app, you must deploy the smart contracts and add their addresses to the configuration file.
+    - First, run the deployment script in the `hardhat` package.
+    - Then, open `lib/contracts.ts` and paste the deployed `EscrowFactory` and `MockToken` addresses into the respective constants.
+
+4.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
+    The application will be available at `http://localhost:3000`.
+
+## 🎨 Next Steps (UI Polish)
+
+The core functionality is complete. The immediate next steps are focused on branding and visual refinement.
+
+- [ ] **Update Tailwind Theme:** Customize the color palette in `tailwind.config.ts` and `globals.css` to match a specific brand identity.
+- [ ] **Add Logo:** Incorporate a project logo into the `Header` component.

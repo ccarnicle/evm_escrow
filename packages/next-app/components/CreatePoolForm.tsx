@@ -5,27 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ethers } from 'ethers';
 import { useWeb3 } from '@/lib/contexts/Web3Context';
 import { MOCK_TOKEN_ADDRESS, ESCROW_FACTORY_ADDRESS, MOCK_TOKEN_ABI } from '@/lib/contracts';
-
-// Reusable input component remains the same
-interface FormInputProps {
-  label: string;
-  id: string;
-  type?: string;
-  value: string | number;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
-  readOnly?: boolean;
-}
-
-function FormInput({ label, id, type = 'text', value, onChange, placeholder, readOnly = false }: FormInputProps) {
-  // ... (this component's code is unchanged)
-  return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-foreground/80 mb-2">{label}</label>
-      <input type={type} id={id} value={value} onChange={onChange} placeholder={placeholder} readOnly={readOnly} className={`w-full p-3 rounded-md bg-secondary border border-accent focus:outline-none focus:ring-2 focus:ring-primary ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`} required={!readOnly} />
-    </div>
-  );
-}
+import FormInput from '@/components/ui/FormInput';
 
 export default function CreatePoolForm() {
     const { contract, signer } = useWeb3(); // We need the signer for the approve tx

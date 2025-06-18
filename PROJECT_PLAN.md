@@ -48,6 +48,9 @@ escrow-monorepo/
         ├── app/                 # Next.js App Router
         │   ├── create/
         │   │   └── page.tsx          # Create pool page
+        │   ├── pool/
+        │   │   └── [id]/
+        │   │       └── page.tsx      # Dynamic pool detail page
         │   ├── types/
         │   │   └── window.d.ts       # Global type definitions
         │   ├── globals.css           # Global styles
@@ -56,9 +59,13 @@ escrow-monorepo/
         │   └── favicon.ico           # Site favicon
         ├── components/          # Reusable UI components
         │   ├── CreatePoolForm.tsx    # Pool creation form
-        │   ├── Footer.tsx            # Site footer
+        │   ├── DistributeWinningsForm.tsx # Form for distributing winnings
+        │   ├── JoinPoolForm.tsx      # Form for joining a pool
+        │   ├── PoolCard.tsx          # Pool display card
         │   ├── Header.tsx            # Site header
-        │   └── PoolCard.tsx          # Pool display card
+        │   ├── Footer.tsx            # Site footer
+        │   └── ui/
+        │       └── FormInput.tsx     # Reusable form input component
         ├── lib/                 # Utility libraries
         │   ├── contexts/
         │   │   └── Web3Context.tsx   # Web3 context provider
@@ -82,44 +89,42 @@ escrow-monorepo/
         └── .gitignore                # Next.js-specific ignore rules
 ```
 
-## ✅ Current Project Status (End of "Create Pool" Feature)
+## ✅ v0.1 Status: MVP COMPLETE
 
-**Week 1 & 2 Goals: Foundations & Core Feature Implementation - COMPLETE**
+All core features for the initial version have been successfully implemented.
 
-1.  **Smart Contracts Finalized:** The `EscrowFactory.sol` and `MockToken.sol` contracts are feature-complete and fully tested. The deployment system has been migrated from Hardhat Ignition to a more robust, classic Hardhat script (`scripts/deploy.ts`).
+1.  **Smart Contracts Finalized:** The `EscrowFactory.sol` contract is complete with functions for `createEscrow`, `joinEscrow`, and `distributeWinnings`. It is fully tested and deployed.
 
-2.  **Frontend Foundation Built:** The Next.js application has a complete layout, theme, and component structure. A `Web3Context` has been implemented to manage wallet state globally.
+2.  **Frontend Foundation Built:** The Next.js application has a complete layout, theme, and component structure with a global `Web3Context`.
 
-3.  **Live Data Integration:**
-    - The homepage (`/`) successfully connects to the local blockchain, fetches the list of all created pools by querying past events, and displays them as `PoolCard` components.
-    - Wallet connection is fully functional, allowing users to connect via MetaMask.
+3.  **"Create Pool" Feature Complete:** The `/create` page allows users to define and create new prize pools, correctly handling the `approve` and `createEscrow` transaction flow.
 
-4.  **"Create Pool" Feature Complete:**
-    - The `/create` page contains a fully functional form for creating new prize pools.
-    - The crucial two-step transaction flow (`approve` then `createEscrow`) has been successfully implemented, providing a clear and working user experience for contract interaction that requires token spending.
+4.  **"View Pool" Feature Complete:** The homepage (`/`) fetches and displays all created pools. The dynamic detail page (`/pool/[id]`) successfully fetches and displays on-chain data for a specific pool.
 
-## 🚀 Immediate Next Steps
-1.  **Build Pool Detail Page (`/pool/[id]`):**
-    - Create the dynamic page structure to display detailed information for a single pool.
-    - Use the `getEscrowDetails` function from the smart contract to fetch and display data like total pot, end time, organizer, etc.
+5.  **"Join Pool" Feature Complete:** The pool detail page includes a form for users to join a pool, handling both fixed-dues and open-contribution scenarios with the necessary `approve` and `joinEscrow` logic.
 
-2.  **Implement "Join Pool" Feature:**
-    - On the pool detail page, add a form or modal for users to join the pool.
-    - Implement the `approve` and `joinEscrow` transaction logic, mirroring the flow from the "Create Pool" feature.
-    - Handle different scenarios, such as pools with fixed dues vs. open-contribution pools.
+6.  **"Distribute Winnings" Feature Complete:** The pool detail page conditionally displays a secure form for the organizer to close the pool and distribute the winnings after the end time has passed. This includes client-side validation for payout totals and duplicate addresses.
 
-3.  **Implement "Distribute Winnings" (Close Pool) Feature:**
-    - On the pool detail page, create a new UI section that is visible only to the pool's organizer.
-    - This UI should only be enabled after the pool's `endTime` has passed.
-    - Build a dynamic form allowing the organizer to specify recipient addresses and payout amounts.
-    - Add client-side validation to ensure the total payout matches the pool's total amount before sending the transaction.
-    - Implement the logic to call the `distributeWinnings` function.
+## 🚀 v0.2 Potential Features & Improvements
 
-4.  **Integrate Privy:**
-    - Begin planning the integration of Privy for a smoother user authentication flow. 
+This section captures ideas for the next iteration of the project, based on observations during v0.1 development.
 
-5.  **Enhance UI with More Data:**
-    - Display a list of participants/depositors on the pool detail page to create a more dynamic and engaging experience.
+1.  **Enforce One Entry Per Wallet (Contract Level):**
+       **Goal:** For specific pool types (e.g., fantasy leagues), prevent a single wallet from joining more than once.
+       **Implementation Idea:** Add a `bool limitToOneEntry` flag to the `Escrow` struct. In the `createEscrow` function, allow the organizer to set this flag. In the `joinEscrow` function, add a `require(escrow.depositors[msg.sender] == 0, "You have already joined this pool.")` check if the flag is true.
 
-6.  **Prepare for v0.2:**
-    - Research implementing a one-click transaction solution for supported tokens (like USDC) using EIP-2612 `permit`.
+2.  **Enforce One Payout Per Winner (Contract Level):**
+       **Goal:** Prevent an organizer from accidentally or maliciously sending funds to the same address multiple times in a single distribution.
+       **Implementation Idea:** In the `distributeWinnings` function, use a `memory` mapping to track addresses that have already been assigned a payout within the current call. Example: `mapping(address => bool) memory hasBeenPaid;` and check against it in the loop.
+
+3.  **Integrate Privy:**
+       **Goal:** Streamline user authentication and wallet management, making the app more accessible to non-web3 native users.
+       **Implementation Idea:** Replace the current `connectWallet` logic with the Privy SDK for both embedded wallets and external wallet connections.
+
+4.  **Improve UX with EIP-2612 `permit`:**
+       **Goal:** For supported ERC20 tokens (like USDC), eliminate the two-step `approve`/`transfer` flow and combine it into a single "Join Pool" transaction.
+       **Implementation Idea:** Create a new function in the contract (e.g., `joinWithPermit`) that accepts a signature as an argument. The frontend will have the user sign an off-chain message (free), and then send that signature to the new function.
+
+5.  **Display Participant List:**
+       **Goal:** Make the pool detail page more dynamic and engaging by showing who has joined.
+       **Implementation Idea:** The contract already emits `DepositMade` events. The frontend can query these events for a specific `escrowId` and display the list of depositors.

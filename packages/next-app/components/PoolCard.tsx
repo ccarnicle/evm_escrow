@@ -1,6 +1,5 @@
 import Link from 'next/link';
 
-// Define the type for the pool prop for better type-safety
 interface Pool {
   id: number;
   name: string;
@@ -15,32 +14,38 @@ interface PoolCardProps {
   pool: Pool;
 }
 
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-foreground/60">{label}</p>
+      <p className="font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
 export default function PoolCard({ pool }: PoolCardProps) {
   return (
-    <Link href={`/pool/${pool.id}`}>
-      <div className="bg-secondary border border-accent rounded-lg p-6 h-full flex flex-col justify-between transition-transform hover:scale-105 hover:border-primary">
-        <div>
-          <h3 className="text-xl font-bold text-primary-foreground">{pool.name}</h3>
-          <p className="text-sm text-foreground/60 mt-1">
-            by {pool.organizer.slice(0, 6)}...{pool.organizer.slice(-4)}
-          </p>
-
-          <div className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-foreground/80">Dues:</span>
-              <span className="font-mono">{pool.dues === '0' ? 'Open Entry' : `${pool.dues} ${pool.tokenSymbol}`}</span>
+    // Wrap the entire card in a Link component
+    <Link href={`/pool/${pool.id}`} className="block">
+        <div className="bg-card border border-accent p-6 rounded-lg hover:border-primary transition-colors duration-200 cursor-pointer space-y-4 h-full flex flex-col justify-between">
+            <div>
+                <div className="flex justify-between items-start">
+                    <h3 className="text-xl font-bold text-primary">{pool.name}</h3>
+                    <div className="text-right">
+                        <p className="text-xs text-foreground/60">Ends In</p>
+                        <p className="font-semibold">{pool.endsIn}</p>
+                    </div>
+                </div>
+                <p className="text-sm text-foreground/80 mt-1 truncate" title={pool.organizer}>
+                    By: {pool.organizer}
+                </p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-foreground/80">Total Pot:</span>
-              <span className="font-mono">{pool.totalPot} {pool.tokenSymbol}</span>
-            </div>
-          </div>
-        </div>
 
-        <div className="mt-6 text-center text-sm text-yellow-400">
-          Closes in {pool.endsIn}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-accent">
+                <InfoItem label="Total Pot" value={`${pool.totalPot} MTK`} />
+                <InfoItem label="Dues" value={Number(pool.dues) > 0 ? `${pool.dues} MTK` : 'Open'} />
+            </div>
         </div>
-      </div>
     </Link>
   );
 }
