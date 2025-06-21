@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { ethers, BrowserProvider, Signer } from 'ethers';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { ESCROW_FACTORY_ADDRESS, ESCROW_FACTORY_ABI } from '@/lib/contracts';
 
 // Define the shape of the context data
@@ -10,7 +11,10 @@ interface Web3ContextType {
   signer: Signer | null;
   contract: ethers.Contract | null;
   account: string | null;
-  connectWallet: () => Promise<void>;
+  login: () => void;
+  logout: () => void;
+  ready: boolean;
+  authenticated: boolean;
 }
 
 // Create the context with a default null value
@@ -18,34 +22,48 @@ const Web3Context = createContext<Web3ContextType | null>(null);
 
 // Create the provider component
 export function Web3Provider({ children }: { children: ReactNode }) {
+  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { wallets } = useWallets();
+
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
   const [signer, setSigner] = useState<Signer | null>(null);
   const [contract, setContract] = useState<ethers.Contract | null>(null);
-  const [account, setAccount] = useState<string | null>(null);
 
-  const connectWallet = async () => {
-    if (typeof window.ethereum === 'undefined') {
-      alert("Please install MetaMask!");
-      return;
-    }
+  useEffect(() => {
+    const setupEthers = async () => {
+      if (ready && authenticated && wallets.length > 0) {
+        // Use the first wallet from the wallets array
+        const wallet = wallets[0];
+        const eip1193provider = await wallet.getEthereumProvider();
+        const ethersProvider = new ethers.BrowserProvider(eip1193provider);
+        const signer = await ethersProvider.getSigner();
+        const factoryContract = new ethers.Contract(ESCROW_FACTORY_ADDRESS, ESCROW_FACTORY_ABI, signer);
 
-    try {
-      const browserProvider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await browserProvider.send("eth_requestAccounts", []);
-      const currentSigner = await browserProvider.getSigner();
-      const factoryContract = new ethers.Contract(ESCROW_FACTORY_ADDRESS, ESCROW_FACTORY_ABI, currentSigner);
+        setProvider(ethersProvider);
+        setSigner(signer);
+        setContract(factoryContract);
+      } else {
+        setProvider(null);
+        setSigner(null);
+        setContract(null);
+      }
+    };
 
-      setProvider(browserProvider);
-      setSigner(currentSigner);
-      setContract(factoryContract);
-      setAccount(accounts[0]);
+    setupEthers();
+  }, [ready, authenticated, wallets]);
 
-    } catch (error) {
-      console.error("Error connecting to wallet:", error);
-    }
+  const account = user?.wallet?.address || null;
+
+  const value = {
+    provider,
+    signer,
+    contract,
+    account,
+    login,
+    logout,
+    ready,
+    authenticated,
   };
-
-  const value = { provider, signer, contract, account, connectWallet };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
 }

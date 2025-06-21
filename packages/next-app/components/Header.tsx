@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useWeb3 } from "@/lib/contexts/Web3Context"; // <-- IMPORT our hook
 
 export default function Header() {
-  const { connectWallet, account } = useWeb3(); // <-- USE our hook
+  const { login, logout, account, authenticated } = useWeb3(); // <-- USE our hook
 
   const truncateAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -21,13 +21,21 @@ export default function Header() {
             Create Pool
           </Link>
           
-          {account ? (
-            <div className="bg-secondary px-4 py-2 rounded-md text-sm font-mono">
-              {truncateAddress(account)}
+          {authenticated && account ? (
+            <div className="flex items-center space-x-2">
+              <div className="bg-secondary px-4 py-2 rounded-md text-sm font-mono">
+                {truncateAddress(account)}
+              </div>
+              <button
+                onClick={logout}
+                className="bg-secondary hover:bg-accent text-secondary-foreground px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Logout
+              </button>
             </div>
           ) : (
             <button
-              onClick={connectWallet}
+              onClick={login}
               className="bg-secondary hover:bg-accent text-secondary-foreground px-4 py-2 rounded-md text-sm font-medium"
             >
               Connect Wallet

@@ -4,10 +4,11 @@ This package contains the Next.js frontend for the Escrow Prize Pool project.
 
 ## 🛠️ Tech Stack
 - **Next.js 14+:** React framework (using App Router)
+- **Privy:** For authentication and wallet management (embedded + external)
 - **Tailwind CSS v3:** For styling
 - **ethers.js v6:** For smart contract interaction
 - **TypeScript:** For type safety
-- **React Context:** For global state management (wallet connection)
+- **React Context:** For global state management, integrated with Privy hooks
 
 ## ✅ v0.1 Features
 
@@ -20,7 +21,7 @@ The frontend is feature-complete for the v0.1 MVP, providing a full end-to-end u
     - Conditionally renders different forms based on the pool's state and the user's role (organizer vs. participant).
 - **Join Pool Form:** A component on the detail page that allows any user to join an open pool. It handles the `approve` and `joinEscrow` flow for both fixed-dues and open-contribution pools.
 - **Distribute Winnings Form:** A secure component that is **only visible to the pool's organizer** after the pool's end time has passed. It allows the organizer to specify winner addresses and amounts, validating the data before sending the `distributeWinnings` transaction.
-- **Global Web3 Context:** A React Context (`Web3Context`) provides a shared global state for the connected wallet, provider, and contract instances, making them easily accessible to any component.
+- **Global Web3 Context with Privy:** Authentication and wallet management are now powered by Privy. The global `Web3Context` has been refactored to use Privy's hooks, providing a seamless login experience with both embedded and external wallets and making the user's state (provider, signer, account) easily accessible to all components.
 
 ## 📈 Project Status & Roadmap
 

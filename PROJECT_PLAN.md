@@ -8,7 +8,7 @@ To build a modular web3 app that can be quickly rebranded for different use case
 ## 🛠️ Core Tech Stack
 - **Frontend:** Next.js (App Router), Tailwind CSS, ethers.js
 - **Smart Contracts:** Solidity, Hardhat
-- **Authentication:** Privy (to be integrated)
+- **Authentication:** Privy
 - **Structure:** npm workspaces monorepo
 
 ## 📂 Monorepo Structure
@@ -105,6 +105,10 @@ All core features for the initial version have been successfully implemented.
 
 6.  **"Distribute Winnings" Feature Complete:** The pool detail page conditionally displays a secure form for the organizer to close the pool and distribute the winnings after the end time has passed. This includes client-side validation for payout totals and duplicate addresses.
 
+7.  **Privy Integration Complete:**
+       **Goal:** Streamline user authentication and wallet management, making the app more accessible to non-web3 native users.
+       **Implementation:** Replaced the original `Web3Context` and manual wallet connection logic with Privy's React SDK. The application now uses `PrivyProvider` at the root level and a refactored `Web3Context` that leverages the `usePrivy` and `useWallets` hooks. This provides a seamless login experience with both embedded wallets (for email/social logins) and external wallets like MetaMask.
+
 ## 🚀 v0.2 Potential Features & Improvements
 
 This section captures ideas for the next iteration of the project, based on observations during v0.1 development.
@@ -116,10 +120,6 @@ This section captures ideas for the next iteration of the project, based on obse
 2.  **Enforce One Payout Per Winner (Contract Level):**
        **Goal:** Prevent an organizer from accidentally or maliciously sending funds to the same address multiple times in a single distribution.
        **Implementation Idea:** In the `distributeWinnings` function, use a `memory` mapping to track addresses that have already been assigned a payout within the current call. Example: `mapping(address => bool) memory hasBeenPaid;` and check against it in the loop.
-
-3.  **Integrate Privy:**
-       **Goal:** Streamline user authentication and wallet management, making the app more accessible to non-web3 native users.
-       **Implementation Idea:** Replace the current `connectWallet` logic with the Privy SDK for both embedded wallets and external wallet connections.
 
 4.  **Improve UX with EIP-2612 `permit`:**
        **Goal:** For supported ERC20 tokens (like USDC), eliminate the two-step `approve`/`transfer` flow and combine it into a single "Join Pool" transaction.
